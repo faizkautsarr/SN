@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notifikasi BPJS</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f5f5f5;
+            max-width: 430px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            padding: 16px;
+            background: #fff;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .back-button {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0;
+            margin-right: 12px;
+            color: #333;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            flex: 1;
+        }
+
+        .refresh-button {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            padding: 4px;
+            color: #0f0f0f;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s ease;
+            width: 40px;
+            height: 40px;
+        }
+
+        .refresh-button:hover {
+            opacity: 0.7;
+        }
+
+        .refresh-button:active {
+            transform: scale(0.9);
+        }
+
+        .loading-mask {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+
+        .loading-mask.show {
+            display: flex;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #fff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .notifications-container {
+            background: #fff;
+            min-height: calc(100vh - 100px);
+            transition: opacity 0.2s ease;
+        }
+
+        .notification-detail {
+            display: none;
+            background: #fff;
+            min-height: calc(100vh - 100px);
+            padding: 20px 16px 40px;
+            transition: opacity 0.2s ease;
+            overflow-y: auto;
+        }
+
+        .notification-detail.active {
+            display: block;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .notification-detail::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .notification-detail::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 4px;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .detail-image {
+            width: 100%;
+            max-height: 250px;
+            object-fit: cover;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .detail-title {
+            font-size: 22px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+
+        .detail-time {
+            font-size: 13px;
+            color: #999;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .detail-message {
+            font-size: 16px;
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+
+        .detail-action-button {
+            width: 80%;
+            padding: 14px;
+            background: #00897b;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin: 20px auto 0;
+            display: block;
+            margin-top: 100px;
+        }
+
+        .detail-action-button:hover {
+            background: #00796b;
+        }
+
+        .detail-action-button:active {
+            background: #00695c;
+        }
+
+        .detail-meta {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .detail-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            flex-shrink: 0;
+        }
+
+        .detail-meta-info {
+            flex: 1;
+        }
+
+        .detail-type {
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .detail-icon.payment-reminder {
+            background-color: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .detail-icon.referral-expiry {
+            background-color: #fff3e0;
+            color: #f57c00;
+        }
+
+        .detail-icon.queue-update {
+            background-color: #fce4ec;
+            color: #c2185b;
+        }
+
+        /* Snackbar */
+        .snackbar {
+            visibility: hidden;
+            min-width: 280px;
+            max-width: 90%;
+            background-color: #323232;
+            color: #fff;
+            text-align: left;
+            border-radius: 8px;
+            padding: 16px 24px;
+            position: fixed;
+            z-index: 9999;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            opacity: 0;
+            transition: opacity 0.3s ease, bottom 0.3s ease;
+        }
+
+        .snackbar.show {
+            visibility: visible;
+            opacity: 1;
+            bottom: 50px;
+        }
+
+        .snackbar-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .snackbar-message {
+            flex: 1;
+            line-height: 1.5;
+        }
+
+        .snackbar-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background: #00897b;
+            border-radius: 0 0 8px 8px;
+            animation: progress 1s linear;
+        }
+
+        @keyframes progress {
+            from {
+                width: 100%;
+            }
+            to {
+                width: 0%;
+            }
+        }
+
+        .date-section {
+            padding: 12px 16px 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #666;
+            background: #f5f5f5;
+        }
+
+        .notification-item {
+            display: flex;
+            padding: 16px;
+            border-bottom: 1px solid #f0f0f0;
+            background: #f5f5f5;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            align-items: flex-start;
+            gap: 12px;
+            opacity: 0.7;
+        }
+
+        .notification-item:hover {
+            background: #ebebeb;
+        }
+
+        .notification-item:active {
+            background: #e0e0e0;
+            transform: translateX(2px);
+        }
+
+        .notification-item.unread {
+            background: #fff;
+            opacity: 1;
+        }
+
+        .notification-item.unread:hover {
+            background: #e0f3e7;
+        }
+
+        .notification-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 20px;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .notification-icon.payment-reminder {
+            background-color: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .notification-icon.referral-expiry {
+            background-color: #fff3e0;
+            color: #f57c00;
+        }
+
+        .notification-icon.queue-update {
+            background-color: #fce4ec;
+            color: #c2185b;
+        }
+
+        .notification-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .notification-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 4px;
+        }
+
+        .notification-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #333;
+            line-height: 1.4;
+            padding-right: 8px;
+        }
+
+        .notification-item:not(.unread) .notification-title {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .notification-item:not(.unread) .notification-message {
+            color: #999;
+        }
+
+        .notification-time {
+            font-size: 12px;
+            color: #999;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .notification-message {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .notification-footer {
+            display: none;
+        }
+
+        .read-indicator {
+            display: none;
+        }
+
+        .bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 430px;
+            height: 34px;
+            background: #fff;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .home-indicator {
+            width: 134px;
+            height: 5px;
+            background: #000;
+            border-radius: 100px;
+            opacity: 0.3;
+        }
+
+        @media (max-width: 430px) {
+            body {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<script>
+
+    let currentMode = 'list'; // 'list' or 'detail'
+    let currentNotification = null;
+
+    // Show snackbar notification
+    function showSnackbar(message, duration = 1000) {
+        const snackbar = document.getElementById('snackbar');
+        const messageElement = snackbar.querySelector('.snackbar-message');
+        const progressBar = snackbar.querySelector('.snackbar-progress');
+        
+        // Set message
+        messageElement.textContent = message;
+        
+        // Reset progress bar animation
+        progressBar.style.animation = 'none';
+        setTimeout(() => {
+            progressBar.style.animation = `progress ${duration}ms linear`;
+        }, 10);
+        
+        // Show snackbar
+        snackbar.classList.add('show');
+        
+        // Hide after duration
+        setTimeout(() => {
+            snackbar.classList.remove('show');
+        }, duration);
+    }
+
+    function showLoading() {
+        const loadingMask = document.getElementById('loadingMask');
+        if (loadingMask) {
+            loadingMask.classList.add('show');
+        }
+    }
+
+    function hideLoading() {
+        const loadingMask = document.getElementById('loadingMask');
+        if (loadingMask) {
+            loadingMask.classList.remove('show');
+        }
+    }
+    // Handle refresh button
+    function handleRefresh() {
+
+        const snackbar = document.getElementById('snackbar');
+        const snackbarIcon = snackbar.querySelector('.snackbar-icon');
+
+        showLoading();
+        snackbarIcon.textContent = '↻';
+        
+        showSnackbar('Memperbarui notifikasi...', 2000);
+        
+        setTimeout(() => {
+            location.reload();
+        }, 2000);
+    }
+
+    // Handle back button for multiple frameworks
+    function handleBackButton() {
+        // If in detail mode, go back to list mode
+        if (currentMode === 'detail') {
+            showListMode();
+            return;
+        }
+
+        // Otherwise, navigate back to native app
+        try {
+            // Flutter WebView (InAppWebView)
+            if (window.flutter_inappwebview) {
+                window.flutter_inappwebview.callHandler('goBack');
+                return;
+            }
+
+            // iOS Native (WKWebView)
+            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.goBack) {
+                window.webkit.messageHandlers.goBack.postMessage({});
+                return;
+            }
+
+            // Android Native
+            if (window.Android && typeof window.Android.goBack === 'function') {
+                window.Android.goBack();
+                return;
+            }
+
+            // React Native
+            if (window.ReactNativeWebView) {
+                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'NAVIGATE_BACK' }));
+                return;
+            }
+
+            // Cordova/PhoneGap
+            if (window.cordova && window.history && window.history.length > 1) {
+                window.history.back();
+                return;
+            }
+
+            // Capacitor
+            if (window.Capacitor) {
+                window.Capacitor.Plugins.App.exitApp();
+                return;
+            }
+
+            // Default fallback - browser history
+            if (window.history && window.history.length > 1) {
+                window.history.back();
+            } else {
+                // If no history, close window or go to home
+                window.close();
+            }
+        } catch (error) {
+            console.error('Error handling back button:', error);
+            // Fallback to browser back
+            window.history.back();
+        }
+    }
+
+    // Show list mode
+    function showListMode() {
+        currentMode = 'list';
+        document.getElementById('notificationsContainer').style.display = 'block';
+        document.getElementById('notificationDetail').classList.remove('active');
+        document.querySelector('.header-title').textContent = 'Notifikasi';
+        document.querySelector('.refresh-button').style.display = 'flex';
+        // Re-render notifications to show updated read status
+        renderNotifications();
+    }
+
+    // Show detail mode
+    function showDetailMode(notification) {
+        currentMode = 'detail';
+        currentNotification = notification;
+        document.getElementById('notificationsContainer').style.display = 'none';
+        document.getElementById('notificationDetail').classList.add('active');
+        renderNotificationDetail(notification);
+        document.querySelector('.header-title').textContent = 'Detail Notifikasi';
+        document.querySelector('.refresh-button').style.display = 'none';
+    }
+
+    // Mock data
+    let notifications = [];
+    // Get icon emoji based on notification type
+    function getIconEmoji(type) {
+        const icons = {
+            'payment-reminder': '🔔',
+            'referral-expiry': '📄',
+            'queue-update': '⏰'
+        };
+        return icons[type] || '📌';
+    }
+
+    // Calculate time ago
+    function getTimeAgo(dateString) {
+        const now = new Date();
+        const date = new Date(dateString);
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+
+        if (diffMins < 1) {
+            return 'Baru saja';
+        } else if (diffMins < 60) {
+            return `${diffMins} menit lalu`;
+        } else if (diffHours < 24) {
+            return `${diffHours} jam lalu`;
+        } else {
+            return `${diffDays} hari lalu`;
+        }
+    }
+
+    // Check if date is today
+    function isToday(dateString) {
+        const date = new Date(dateString);
+        const today = new Date();
+        return date.toDateString() === today.toDateString();
+    }
+
+    // Check if date is yesterday
+    function isYesterday(dateString) {
+        const date = new Date(dateString);
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        return date.toDateString() === yesterday.toDateString();
+    }
+
+    // Group notifications by date
+    function groupByDate(notifications) {
+        const groups = {
+            today: [],
+            yesterday: [],
+            older: []
+        };
+
+        notifications.forEach(notification => {
+            if (isToday(notification.createdAt)) {
+                groups.today.push(notification);
+            } else if (isYesterday(notification.createdAt)) {
+                groups.yesterday.push(notification);
+            } else {
+                groups.older.push(notification);
+            }
+        });
+
+        return groups;
+    }
+
+    function getURLParameter(name) {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get(name);
+    }
+    // Render notifications
+    async function renderNotifications() {
+        showLoading();
+        const container = document.getElementById('notificationsContainer');
+        try {
+            const apiUrl = getURLParameter('apiurl') || "http://13.239.117.240:10077/api/bpjs/notification/list";
+ 
+            const response = await fetch(encodeURIComponent(apiUrl));
+            const result = await response.json();
+    
+            if(result && result.data && result.data.length > 0) {
+                notifications = result.data;
+                const grouped = groupByDate(notifications);
+                let html = '';
+
+                if (grouped.today.length > 0) {
+                    html += '<div class="date-section">Hari Ini</div>';
+                    grouped.today.forEach(notification => {
+                        html += createNotificationItem(notification);
+                    });
+                }
+
+                if (grouped.yesterday.length > 0) {
+                    html += '<div class="date-section">Kemarin</div>';
+                    grouped.yesterday.forEach(notification => {
+                        html += createNotificationItem(notification);
+                    });
+                }
+
+                if (grouped.older.length > 0) {
+                    html += '<div class="date-section">Sebelumnya</div>';
+                    grouped.older.forEach(notification => {
+                        html += createNotificationItem(notification);
+                    });
+                }
+
+                container.innerHTML = html;
+                hideLoading();
+            }
+            else {
+              throw new Error('No notifications found');
+            }
+        } catch (error) {
+            const container = document.getElementById('notificationsContainer');
+            container.innerHTML = '<div style="padding: 20px; text-align: center;">Gagal memuat notifikasi. Silakan coba lagi.</div>';
+            setTimeout(() => {
+                hideLoading();
+            }, 2000);
+        }
+    }
+
+    function createNotificationItem(notification) {
+        const isRead = notification.seenAt !== null;
+        const iconEmoji = getIconEmoji(notification.type);
+        const timeAgo = getTimeAgo(notification.createdAt);
+        const readClass = isRead ? '' : 'unread';
+
+        return `
+            <div class="notification-item ${readClass}" onclick="handleNotificationClick('${notification.id}')">
+                <div class="notification-icon ${notification.type}">
+                    ${iconEmoji}
+                </div>
+                <div class="notification-content">
+                    <div class="notification-header">
+                        <div class="notification-title">${notification.summary.title}</div>
+                        <div class="notification-time">${timeAgo}</div>
+                    </div>
+                    <div class="notification-message">${notification.summary.message}</div>
+                    <div class="notification-footer">
+                        <div class="read-indicator ${isRead ? '' : 'unread'}">
+                            ${isRead ? '✓' : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderNotificationDetail(notification) {
+        const detailContainer = document.getElementById('notificationDetail');
+        const iconEmoji = getIconEmoji(notification.type);
+        const timeAgo = getTimeAgo(notification.createdAt);
+        
+        const typeLabels = {
+            'payment-reminder': 'Pengingat Pembayaran',
+            'referral-expiry': 'Rujukan',
+            'queue-update': 'Update Antrian'
+        };
+        const typeLabel = typeLabels[notification.type] || 'Notifikasi';
+        
+        let imageHtml = '';
+        if (notification.detail.image) {
+            imageHtml = `<img src="${notification.detail.image}" alt="${notification.detail.title}" class="detail-image" onerror="this.style.display='none'">`;
+        }
+
+        let actionButtonHtml = '';
+        if (notification.detail.isAction && notification.detail.action) {
+            actionButtonHtml = `
+                <button class="detail-action-button" onclick="handleDetailAction('${notification.id}')">
+                    ${notification.detail.action.title}
+                </button>
+            `;
+        }
+
+        detailContainer.innerHTML = `
+            <div class="detail-meta">
+                <div class="detail-icon ${notification.type}">
+                    ${iconEmoji}
+                </div>
+                <div class="detail-meta-info">
+                    <div class="detail-type">${typeLabel}</div>
+                    <div class="detail-time">
+                        ${timeAgo}
+                    </div>
+                </div>
+            </div>
+            ${imageHtml}
+            <div class="detail-title">${notification.detail.title}</div>
+            <div class="detail-message">${notification.detail.message}</div>
+            ${actionButtonHtml}
+        `;
+    }
+
+    // Handle detail action button
+    function handleDetailAction(id) {
+        const notification = notifications.find(n => n.id === id);
+        if (notification && notification.webhook) {
+            console.log('Action clicked for:', id);
+            console.log('Webhook:', notification.webhook);
+            
+            // Show snackbar message
+            showSnackbar(`Mengarahkan ke: ${notification.webhook.label}`, 1000);
+            
+            // Wait 1 second then redirect to callback URL if not null
+            if (notification.webhook.callbackUrl) {
+                setTimeout(() => {
+                    window.location.href = "https://bpjs.webhook.com/url/payments/callback";
+                }, 1000);
+            }
+        }
+    }
+
+    // Handle notification click
+    function handleNotificationClick(id) {
+        console.log('Notifikasi diklik:', id);
+        const notification = notifications.find(n => n.id === id);
+        if (notification) {
+            // Mark as read
+            if (!notification.seenAt) {
+                notification.seenAt = new Date().toISOString();
+            }
+            // Switch to detail mode
+            showDetailMode(notification);
+        }
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+        renderNotifications(); // ✅ Waits for DOM
+    });
+        
+    // Handle Android hardware back button
+    document.addEventListener('backbutton', function(e) {
+        e.preventDefault();
+        handleBackButton();
+    }, false);
+
+    // Handle browser back button (popstate)
+    window.addEventListener('popstate', function(e) {
+        handleBackButton();
+    });
+</script>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <button class="back-button" onclick="handleBackButton()" aria-label="Kembali" title="Kembali">‹</button>
+        <div class="header-title">Notifikasi</div>
+        <button class="refresh-button" onclick="handleRefresh()" aria-label="Perbaharui notifikasi" title="Perbaharui notifikasi">↻</button>
+    </div>
+
+    <!-- Notifications Container (List Mode) -->
+    <div class="notifications-container" id="notificationsContainer">
+        <!-- Notifications will be dynamically inserted here -->
+    </div>
+
+    <!-- Notification Detail (Detail Mode) -->
+    <div class="notification-detail" id="notificationDetail">
+        <!-- Detail will be dynamically inserted here -->
+    </div>
+
+    <!-- Bottom Home Indicator -->
+    <div class="bottom-bar">
+        <div class="home-indicator"></div>
+    </div>
+
+    <!-- Snackbar -->
+    <div id="snackbar" class="snackbar">
+        <div class="snackbar-icon">🔗</div>
+        <div class="snackbar-message"></div>
+        <div class="snackbar-progress"></div>
+    </div>
+
+    <!-- Loading Mask -->
+    <div id="loadingMask" class="loading-mask">
+        <div class="loading-spinner"></div>
+    </div>
+</body>
+</html>
+
