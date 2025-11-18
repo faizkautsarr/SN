@@ -14,6 +14,6 @@ After Install success
 
 By Default you can run it at
 ```bash
-  http://localhost:9999/notification
+  http://localhost:9999/notifications
 ```
 
