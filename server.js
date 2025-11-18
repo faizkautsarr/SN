@@ -5,7 +5,7 @@ const path = require('path');
 app.use(express.static(__dirname)); // serve all files inside SN
 
 // Route: /notification → notifications.html
-app.get('/notification', (req, res) => {
+app.get('/notifications', (req, res) => {
   res.sendFile(path.join(__dirname, 'notifications.html'));
 });
 
