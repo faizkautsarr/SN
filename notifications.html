@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -101,6 +102,7 @@
             from {
                 transform: rotate(0deg);
             }
+
             to {
                 transform: rotate(360deg);
             }
@@ -140,6 +142,7 @@
                 opacity: 0;
                 transform: translateY(10px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -234,20 +237,6 @@
             margin-bottom: 4px;
         }
 
-        .detail-icon.payment-reminder {
-            background-color: #e3f2fd;
-            color: #1976d2;
-        }
-
-        .detail-icon.referral-expiry {
-            background-color: #fff3e0;
-            color: #f57c00;
-        }
-
-        .detail-icon.queue-update {
-            background-color: #fce4ec;
-            color: #c2185b;
-        }
 
         /* Snackbar */
         .snackbar {
@@ -303,6 +292,7 @@
             from {
                 width: 100%;
             }
+
             to {
                 width: 0%;
             }
@@ -359,20 +349,6 @@
             background-position: center;
         }
 
-        .notification-icon.payment-reminder {
-            background-color: #e3f2fd;
-            color: #1976d2;
-        }
-
-        .notification-icon.referral-expiry {
-            background-color: #fff3e0;
-            color: #f57c00;
-        }
-
-        .notification-icon.queue-update {
-            background-color: #fce4ec;
-            color: #c2185b;
-        }
 
         .notification-content {
             flex: 1;
@@ -459,24 +435,77 @@
     let currentMode = 'list'; // 'list' or 'detail'
     let currentNotification = null;
 
+    const notificationTypes = {
+        BILLING: {
+            icon: '💰',
+            label: 'Tagihan / Pembayaran',
+            background: '#FFE8C2'
+        },
+        MEMBERSHIP: {
+            icon: '🪪',
+            label: 'Keanggotaan',
+            background: '#DFF5FF'
+        },
+        SERVICE: {
+            icon: '🏥',
+            label: 'Layanan',
+            background: '#E8FFD9'
+        },
+        PROFILE: {
+            icon: '👤',
+            label: 'Profil Pengguna',
+            background: '#F3E8FF'
+        },
+        PREVENTIVE: {
+            icon: '🛡️',
+            label: 'Pencegahan',
+            background: '#FFF4D9'
+        },
+        ANNOUNCEMENT: {
+            icon: '📢',
+            label: 'Pengumuman',
+            background: '#FFE1E6'
+        },
+        TRANSACTION: {
+            icon: '💳',
+            label: 'Transaksi',
+            background: '#DFFFEF'
+        },
+        PROMO: {
+            icon: '🏷️',
+            label: 'Promo',
+            background: '#FFF3C9'
+        }
+    };
+
+    function getNotificationConfig(type) {
+        if (!type) return notificationTypes.ANNOUNCEMENT; // Default
+        const normalizedType = type.toUpperCase();
+        return notificationTypes[normalizedType] || {
+            icon: '📌',
+            label: 'Notifikasi',
+            background: '#F5F5F5'
+        };
+    }
+
     // Show snackbar notification
     function showSnackbar(message, duration = 1000) {
         const snackbar = document.getElementById('snackbar');
         const messageElement = snackbar.querySelector('.snackbar-message');
         const progressBar = snackbar.querySelector('.snackbar-progress');
-        
+
         // Set message
         messageElement.textContent = message;
-        
+
         // Reset progress bar animation
         progressBar.style.animation = 'none';
         setTimeout(() => {
             progressBar.style.animation = `progress ${duration}ms linear`;
         }, 10);
-        
+
         // Show snackbar
         snackbar.classList.add('show');
-        
+
         // Hide after duration
         setTimeout(() => {
             snackbar.classList.remove('show');
@@ -504,9 +533,9 @@
 
         showLoading();
         snackbarIcon.textContent = '↻';
-        
+
         showSnackbar('Memperbarui notifikasi...', 2000);
-        
+
         setTimeout(() => {
             location.reload();
         }, 2000);
@@ -596,15 +625,6 @@
 
     // Mock data
     let notifications = [];
-    // Get icon emoji based on notification type
-    function getIconEmoji(type) {
-        const icons = {
-            'payment-reminder': '🔔',
-            'referral-expiry': '📄',
-            'queue-update': '⏰'
-        };
-        return icons[type] || '📌';
-    }
 
     // Calculate time ago
     function getTimeAgo(dateString) {
@@ -671,12 +691,12 @@
         showLoading();
         const container = document.getElementById('notificationsContainer');
         try {
-            const apiUrl = getURLParameter('apiurl') || "http://13.239.117.240:10077/api/bpjs/notification/list";
- 
+            const apiUrl = getURLParameter('apiurl');
+
             const response = await fetch(apiUrl);
             const result = await response.json();
-    
-            if(result && result.data && result.data.length > 0) {
+
+            if (result && result.data && result.data.length > 0) {
                 notifications = result.data;
                 const grouped = groupByDate(notifications);
                 let html = '';
@@ -706,7 +726,7 @@
                 hideLoading();
             }
             else {
-              throw new Error('No notifications found');
+                throw new Error('No notifications found');
             }
         } catch (error) {
             const container = document.getElementById('notificationsContainer');
@@ -719,14 +739,14 @@
 
     function createNotificationItem(notification) {
         const isRead = notification.seenAt !== null;
-        const iconEmoji = getIconEmoji(notification.type);
+        const config = getNotificationConfig(notification.type);
         const timeAgo = getTimeAgo(notification.createdAt);
         const readClass = isRead ? '' : 'unread';
 
         return `
             <div class="notification-item ${readClass}" onclick="handleNotificationClick('${notification.id}')">
-                <div class="notification-icon ${notification.type}">
-                    ${iconEmoji}
+                <div class="notification-icon" style="background-color: ${config.background};">
+                    ${config.icon}
                 </div>
                 <div class="notification-content">
                     <div class="notification-header">
@@ -746,16 +766,11 @@
 
     function renderNotificationDetail(notification) {
         const detailContainer = document.getElementById('notificationDetail');
-        const iconEmoji = getIconEmoji(notification.type);
+        const config = getNotificationConfig(notification.type);
         const timeAgo = getTimeAgo(notification.createdAt);
-        
-        const typeLabels = {
-            'payment-reminder': 'Pengingat Pembayaran',
-            'referral-expiry': 'Rujukan',
-            'queue-update': 'Update Antrian'
-        };
-        const typeLabel = typeLabels[notification.type] || 'Notifikasi';
-        
+
+        const typeLabel = config.label;
+
         let imageHtml = '';
         if (notification.detail.image) {
             imageHtml = `<img src="${notification.detail.image}" alt="${notification.detail.title}" class="detail-image" onerror="this.style.display='none'">`;
@@ -772,8 +787,8 @@
 
         detailContainer.innerHTML = `
             <div class="detail-meta">
-                <div class="detail-icon ${notification.type}">
-                    ${iconEmoji}
+                <div class="detail-icon" style="background-color: ${config.background};">
+                    ${config.icon}
                 </div>
                 <div class="detail-meta-info">
                     <div class="detail-type">${typeLabel}</div>
@@ -795,10 +810,10 @@
         if (notification && notification.webhook) {
             console.log('Action clicked for:', id);
             console.log('Webhook:', notification.webhook);
-            
+
             // Show snackbar message
             showSnackbar(`Mengarahkan ke: ${notification.webhook.label}`, 1000);
-            
+
             // Wait 1 second then redirect to callback URL if not null
             if (notification.webhook.callbackUrl) {
                 setTimeout(() => {
@@ -823,27 +838,29 @@
     }
 
     // Initialize
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         renderNotifications(); // ✅ Waits for DOM
     });
-        
+
     // Handle Android hardware back button
-    document.addEventListener('backbutton', function(e) {
+    document.addEventListener('backbutton', function (e) {
         e.preventDefault();
         handleBackButton();
     }, false);
 
     // Handle browser back button (popstate)
-    window.addEventListener('popstate', function(e) {
+    window.addEventListener('popstate', function (e) {
         handleBackButton();
     });
 </script>
+
 <body>
     <!-- Header -->
     <div class="header">
         <button class="back-button" onclick="handleBackButton()" aria-label="Kembali" title="Kembali">‹</button>
         <div class="header-title">Notifikasi</div>
-        <button class="refresh-button" onclick="handleRefresh()" aria-label="Perbaharui notifikasi" title="Perbaharui notifikasi">↻</button>
+        <button class="refresh-button" onclick="handleRefresh()" aria-label="Perbaharui notifikasi"
+            title="Perbaharui notifikasi">↻</button>
     </div>
 
     <!-- Notifications Container (List Mode) -->
@@ -873,5 +890,5 @@
         <div class="loading-spinner"></div>
     </div>
 </body>
-</html>
 
+</html>
