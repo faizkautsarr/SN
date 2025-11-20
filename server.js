@@ -8,6 +8,11 @@ app.get('/notifications', (req, res) => {
   res.sendFile(path.join(__dirname, 'notifications.html'));
 });
 
+app.get('/favicon.png', (req, res) => {
+  res.sendFile(__dirname + '/favicon.png');
+});
+
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Start server
 app.listen(PORT, () => {
