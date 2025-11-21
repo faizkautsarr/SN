@@ -434,6 +434,9 @@
 
     let currentMode = 'list'; // 'list' or 'detail'
     let currentNotification = null;
+    let currentApiUrl = null; // Store the API URL being used
+    let isStorageApi = false; // Flag to indicate if using storage API
+    let currentUserId = null; // Store user ID if using storage API
 
     const notificationTypes = {
         BILLING: {
@@ -686,12 +689,46 @@
         const urlParams = new URLSearchParams(window.location.search);
         return urlParams.get(name);
     }
+
+    // Check if URL is a storage API endpoint
+    function isStorageApiUrl(url) {
+        if (!url) return false;
+        // Check if URL matches pattern: /api/notifications/USER_ID
+        const match = url.match(/\/api\/notifications\/([^\/\?]+)$/);
+        if (match) {
+            currentUserId = match[1];
+            return true;
+        }
+        return false;
+    }
+
+    // Mark notification as seen via API
+    async function markNotificationAsSeen(userId, notificationId) {
+        try {
+            // Extract base URL from current API URL
+            const baseUrl = currentApiUrl.replace(/\/api\/notifications\/.*$/, '');
+            const response = await fetch(`${baseUrl}/api/notifications/${userId}/${notificationId}/seen`, {
+                method: 'PATCH'
+            });
+            const result = await response.json();
+            if (result.success) {
+                console.log('Notification marked as seen:', notificationId);
+            }
+        } catch (error) {
+            console.error('Failed to mark notification as seen:', error);
+        }
+    }
+
     // Render notifications
     async function renderNotifications() {
         showLoading();
         const container = document.getElementById('notificationsContainer');
         try {
             const apiUrl = getURLParameter('apiurl');
+            currentApiUrl = apiUrl;
+            
+            // Check if this is a storage API URL
+            isStorageApi = isStorageApiUrl(apiUrl);
 
             const response = await fetch(apiUrl);
             const result = await response.json();
@@ -824,13 +861,18 @@
     }
 
     // Handle notification click
-    function handleNotificationClick(id) {
+    async function handleNotificationClick(id) {
         console.log('Notifikasi diklik:', id);
         const notification = notifications.find(n => n.id === id);
         if (notification) {
-            // Mark as read
+            // Mark as read locally
             if (!notification.seenAt) {
                 notification.seenAt = new Date().toISOString();
+                
+                // If using storage API, persist the change
+                if (isStorageApi && currentUserId) {
+                    await markNotificationAsSeen(currentUserId, id);
+                }
             }
             // Switch to detail mode
             showDetailMode(notification);
